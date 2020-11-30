@@ -1,11 +1,14 @@
+from decimal import Decimal
+
 import pytest
 from django.db import IntegrityError
+from django.db.models import F
 from django.test.utils import override_settings
 
 from .models import (TestModel, TestModelWithForeignKey, TestModelWithNonEditableFields,
                      OrdinaryTestModel, OrdinaryTestModelWithForeignKey, TestModelWithSelfForeignKey,
                      TestExpressionModel, TestModelWithPreSaveSignal, TestDoubleForeignKeyModel,
-                     TestBinaryModel)
+                     TestBinaryModel, TestModelWithDecimalField)
 from .utils import assert_select_number_queries_on_model
 
 
@@ -171,3 +174,11 @@ def test_access_deferred_field_doesnt_reset_state():
     assert tm_deferred.get_deferred_fields() == set()
     # previously accessing the deferred field would reset the dirty state.
     assert tm_deferred.get_dirty_fields() == {"boolean": True}
+
+
+@pytest.mark.django_db
+def test_f_objects_and_save_update_fields():
+    tm = TestModelWithDecimalField.objects.create(decimal_field=Decimal("1"))
+
+    tm.decimal_field = F("decimal_field") + 1
+    tm.save(update_fields=["decimal_field"])
